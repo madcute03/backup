@@ -38,3 +38,6 @@ Thumbs.db
 
 # Keep this file in version control
 !.env.example
+
+# Local secrets file for act
+.secrets

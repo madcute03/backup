@@ -1,42 +1,75 @@
-name: Deploy to Production
+name: Deploy to Railway
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
+
+env:
+  RAILWAY_ENVIRONMENT: production
+  NODE_VERSION: '20'
+  PHP_VERSION: '8.2'
 
 jobs:
   deploy:
+    name: Deploy to Railway
     runs-on: ubuntu-latest
+    environment: production
     
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        
-    - name: Install Dependencies
-      run: |
-        npm install
-        
-    - name: Build Assets
-      run: |
-        npm run build
-        
-    # Add your deployment steps here
-    # For example, if using SSH:
-    # - name: Deploy via SSH
-    #   uses: appleboy/ssh-action@master
-    #   with:
-    #     host: ${{ secrets.SSH_HOST }}
-    #     username: ${{ secrets.SSH_USERNAME }}
-    #     key: ${{ secrets.SSH_PRIVATE_KEY }}
-    #     script: |
-    #       cd /path/to/your/app
-    #       git pull
-    #       npm install --production
-    #       npm run build
-    #       php artisan optimize
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_mysql, tokenizer, xml, gd, fileinfo, intl, exif, bcmath, ctype, json, openssl, pdo_sqlite, session, xmlwriter
+          coverage: none
+          tools: composer:v2
+
+      - name: Install PHP Dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+      - name: Install Node Dependencies
+        run: npm ci
+
+      - name: Build Assets
+        run: |
+          npm run build
+          
+      - name: Cache .next
+        uses: actions/cache@v3
+        with:
+          path: |
+            .next/cache
+          key: ${{ runner.os }}-next-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-next-
+
+      - name: Run Tests
+        run: |
+          cp .env.example .env.test
+          php artisan key:generate --env=testing
+          php artisan migrate --env=testing --force
+          php artisan test
+
+      - name: Setup Railway CLI
+        uses: railwayapp/cli/action@v1.0.0
+        with:
+          token: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy to Railway
+        run: |
+          railway up --detach
