@@ -67,10 +67,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Force HTTPS in production
         if ($this->app->environment('production')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
-            \Illuminate\Support\Facades\URL::forceRootUrl(config('app.url'));
+            \URL::forceScheme('https');
+            \URL::forceRootUrl(config('app.url'));
         }
 
         Vite::prefetch(concurrency: 3);

@@ -9,11 +9,7 @@ export default defineConfig(({ mode }) => ({
             input: 'resources/js/app.jsx',
             refresh: true,
         }),
-        react({
-            jsxImportSource: 'react',
-            jsxRuntime: 'automatic',
-            fastRefresh: true,
-        }),
+        react(),
     ],
 
     resolve: {
@@ -35,7 +31,6 @@ export default defineConfig(({ mode }) => ({
                         'react',
                         'react-dom',
                         '@inertiajs/react',
-                        'axios',
                     ],
                 },
                 assetFileNames: 'assets/[name].[hash][extname]',
